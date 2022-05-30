@@ -4,7 +4,7 @@ import cytoscape from 'cytoscape';
 
 import App from './app/App';
 import { CssBaseline } from '@mui/material';
-import { CytoscapeProvider } from './app/CytoscapeContext';
+import { CytoscapeProvider } from './NetworkView/CytoscapeContext';
 import customLayout from './app/CustomLayout';
 
 cytoscape.use(customLayout);
