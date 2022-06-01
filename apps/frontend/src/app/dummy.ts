@@ -4,7 +4,10 @@ export const generateSimpleTree = (size: number) => {
   const nodes: NodeDefinition[] = [];
 
   for (let i = 0; i < size; i++) {
-    nodes.push({ group: 'nodes', data: { id: `node-${i}` } });
+    nodes.push({
+      group: 'nodes',
+      data: { id: `node-${i}`, number: Math.floor(Math.random() * 1000) },
+    });
   }
 
   const edges: EdgeDefinition[] = [];

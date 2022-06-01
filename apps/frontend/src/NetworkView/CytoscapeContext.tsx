@@ -21,7 +21,13 @@ export const CytoscapeContext =
   React.createContext<CytoscapeContextValue | null>(null);
 
 export const useCytoscape = () => {
-  return useContext(CytoscapeContext);
+  const context = useContext(CytoscapeContext);
+
+  if (!context) {
+    throw new Error('No value provided for CytoscapeContext');
+  }
+
+  return context;
 };
 
 interface CytoscapeProviderProps {

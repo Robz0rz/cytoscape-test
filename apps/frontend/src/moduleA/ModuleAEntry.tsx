@@ -1,5 +1,4 @@
 import React, { ChangeEvent, useEffect, useState } from 'react';
-import { useCytoscape } from '../NetworkView/CytoscapeContext';
 import { generateSimpleTree } from '../app/dummy';
 import {
   Box,
@@ -18,13 +17,14 @@ import EdgeWrapper from '../NetworkView/EdgeWrapper';
 import { ElementDefinition } from 'cytoscape';
 import Layer from '../app/Layer';
 import FactoryIcon from '../assets/factory.png';
-import DatePoller from '../app/DatePoller';
+import Randomizer from '../app/Randomizer';
+import { Link } from 'react-router-dom';
 
 const MODULE_OVERLAYS: OverlayDefinition[] = [
   {
-    name: 'Icon',
+    name: 'FactoryIcon',
     active: false,
-    renderNode: (id, data, node) => (
+    renderNode: (id, _, node) => (
       <img
         style={{
           width: node.width(),
@@ -39,18 +39,28 @@ const MODULE_OVERLAYS: OverlayDefinition[] = [
     name: 'NodeId',
     active: false,
     placement: 'top',
-    renderNode: (id, data, node) => <Layer>{id}</Layer>,
+    renderNode: (id) => <Layer>{id}</Layer>,
   },
   {
-    name: 'Date',
+    name: 'Number',
+    active: false,
+    placement: 'top',
+    // TODO: better typing for data
+    renderNode: (id, { number }) => <Layer>{number as number}</Layer>,
+  },
+  {
+    name: 'Randomizer',
     active: false,
     placement: 'bottom',
-    renderNode: () => <DatePoller />,
+    renderNode: () => (
+      <Layer>
+        <Randomizer />
+      </Layer>
+    ),
   },
 ];
 
 const ModuleAEntry: React.FC = () => {
-  const context = useCytoscape();
   const [nodeCount, setNodeCount] = useState(10);
   const [overlays, setOverlays] = useState(MODULE_OVERLAYS);
   const [elements, setElements] = useState<ElementDefinition[]>(() =>
@@ -60,10 +70,6 @@ const ModuleAEntry: React.FC = () => {
   useEffect(() => {
     setElements(generateSimpleTree(nodeCount));
   }, [nodeCount]);
-
-  if (!context) {
-    throw new Error('No cytoscape context provided');
-  }
 
   const handleNodeCountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(event.target.value);
@@ -95,6 +101,7 @@ const ModuleAEntry: React.FC = () => {
           },
         }}
       >
+        <Link to="/module-b">Module B</Link>
         <List>
           <ListItem>
             <TextField
@@ -128,7 +135,6 @@ const ModuleAEntry: React.FC = () => {
           elements={elements}
           overlays={overlays}
           renderNodeLabel={(node, overlays) => {
-            console.log(overlays);
             return (
               <NodeWrapper node={node} key={node.data('id')}>
                 {overlays.map((x) => x.element)}

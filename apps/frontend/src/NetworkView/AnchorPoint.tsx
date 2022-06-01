@@ -41,8 +41,6 @@ const AnchorPoint: React.FC<PropsWithChildren<AnchorPointProps>> = ({
         display: 'flex',
         position: 'absolute',
         flexDirection: direction,
-        width: direction === 'row' ? '100%' : undefined,
-        height: direction === 'column' ? '100%' : undefined,
         ...STYLE_MAP[placement],
       }}
     >

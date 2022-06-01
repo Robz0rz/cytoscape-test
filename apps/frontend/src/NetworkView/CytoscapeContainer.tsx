@@ -1,10 +1,8 @@
 import { EdgeSingular, ElementDefinition, NodeSingular } from 'cytoscape';
-import React, { PropsWithChildren } from 'react';
-import { CytoscapeContext } from './CytoscapeContext';
+import React, { PropsWithChildren, useEffect, useRef } from 'react';
+import { CytoscapeContext, useCytoscape } from './CytoscapeContext';
 import NodeWrapper from './NodeWrapper';
 import AnchorPoint, { AnchorPointPlacement } from './AnchorPoint';
-
-export type NodeOverlayPlacement = 'center' | 'top' | 'bottom';
 
 export interface OverlayDefinition {
   name: string;
@@ -37,6 +35,7 @@ interface CytoscapeContainerProps {
   overlays: OverlayDefinition[];
 }
 
+// TODO: should be able to convert to function component
 class CytoscapeContainer extends React.Component<
   PropsWithChildren<CytoscapeContainerProps>
 > {
@@ -109,7 +108,7 @@ class CytoscapeContainer extends React.Component<
       .toArray()
       .map((node) => {
         return (
-          <NodeWrapper node={node}>
+          <NodeWrapper node={node} key={node.id()}>
             <div
               style={{
                 width: node.width(),
@@ -237,3 +236,150 @@ class CytoscapeContainer extends React.Component<
 }
 
 export default CytoscapeContainer;
+
+// FIXME
+export const FunctionContainer: React.FC<
+  PropsWithChildren<CytoscapeContainerProps>
+> = ({ elements, overlays, children, renderNodeLabel, renderEdgeLabel }) => {
+  const { cy } = useCytoscape();
+  const labelContainer = useRef<HTMLDivElement>(null);
+
+  const layout = () => {
+    cy.layout({ name: 'breadthfirst', fit: true }).run();
+  };
+
+  const calculateTransform = () => {
+    const pan = cy.pan();
+    const zoom = cy.zoom();
+    return `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
+  };
+
+  useEffect(() => {
+    cy.on('pan zoom', () => {
+      if (labelContainer.current) {
+        labelContainer.current.style.transform = calculateTransform();
+      }
+    });
+
+    return () => {
+      cy.off('pan zoom');
+    };
+  }, []);
+
+  useEffect(() => {
+    cy.elements().remove();
+    cy.add(elements);
+    layout();
+  }, [elements]);
+
+  const mount = (container: HTMLDivElement | null) => {
+    if (container) {
+      cy.mount(container);
+      layout();
+    }
+  };
+
+  const renderNodeLabels = () => {
+    if (!renderNodeLabel) return null;
+
+    const mappedOverlays = overlays
+      .filter((overlay) => overlay.active)
+      .reduce<Record<AnchorPointPlacement | 'center', OverlayDefinition[]>>(
+        (acc, next) => {
+          acc[next.placement ?? 'center'].push(next);
+          return acc;
+        },
+        { center: [], top: [], left: [], bottom: [], right: [] }
+      );
+
+    return cy
+      .nodes()
+      .toArray()
+      .map((node) => {
+        return (
+          <NodeWrapper node={node} key={node.id()}>
+            <div
+              style={{
+                width: node.width(),
+                height: node.height(),
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {mappedOverlays['center'].map((overlay) => (
+                <React.Fragment key={overlay.name}>
+                  {overlay.renderNode?.(node.id(), node.data(), node)}
+                </React.Fragment>
+              ))}
+            </div>
+            <AnchorPoint direction="row" placement="top">
+              {mappedOverlays['top'].map((overlay) => (
+                <React.Fragment key={overlay.name}>
+                  {overlay.renderNode?.(node.id(), node.data(), node)}
+                </React.Fragment>
+              ))}
+            </AnchorPoint>
+            <AnchorPoint direction="row" placement="bottom">
+              {mappedOverlays['bottom'].map((overlay) => (
+                <React.Fragment key={overlay.name}>
+                  {overlay.renderNode?.(node.id(), node.data(), node)}
+                </React.Fragment>
+              ))}
+            </AnchorPoint>
+            <AnchorPoint direction="column" placement="left">
+              {mappedOverlays['left'].map((overlay) => (
+                <React.Fragment key={overlay.name}>
+                  {overlay.renderNode?.(node.id(), node.data(), node)}
+                </React.Fragment>
+              ))}
+            </AnchorPoint>
+            <AnchorPoint direction="column" placement="right">
+              {mappedOverlays['right'].map((overlay) => (
+                <React.Fragment key={overlay.name}>
+                  {overlay.renderNode?.(node.id(), node.data(), node)}
+                </React.Fragment>
+              ))}
+            </AnchorPoint>
+          </NodeWrapper>
+        );
+      });
+  };
+
+  const renderEdgeLabels = () => {
+    if (!renderEdgeLabel) return null;
+    return cy.edges().map(renderEdgeLabel);
+  };
+
+  const renderLabels = () => {
+    return (
+      <div
+        ref={labelContainer}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: 500,
+          transformOrigin: 'top left',
+          transform: calculateTransform(),
+          zIndex: 10,
+        }}
+      >
+        {renderNodeLabels()}
+        {renderEdgeLabels()}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ height: '100%', width: '100%', backgroundColor: '#f5f5f5' }}>
+      <div
+        style={{ height: '100%', width: '100%', overflow: 'hidden' }}
+        ref={mount}
+      >
+        {renderLabels()}
+      </div>
+      {children}
+    </div>
+  );
+};
